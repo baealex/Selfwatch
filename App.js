@@ -7,77 +7,86 @@
  */
 
 import React from 'react';
-import {
-  StyleSheet,
-  View,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-} from 'react-native';
-import DatePicker from 'react-native-date-picker';
 
 import {
-  Colors,
-} from 'react-native/Libraries/NewAppScreen';
+    StatusBar,
+    BackHandler,
+} from 'react-native';
+
+import RNFS  from 'react-native-fs';
+
+import BirthPick from './src/pages/birthpick';
+import DeathPick from './src/pages/deathpick';
+import LifeTimer from './src/pages/lifetimer';
+import KeepAwake from 'react-native-keep-awake';
 
 class App extends React.Component {
-  state = {
-    date: new Date(),
-  }
+    state = {
+        pageStack: ['death'],
+        birth: undefined,
+        death: undefined,
+    }
 
-  setDate(date) {
-    let newState = this.state;
-    newState.date = date;
-    this.setState(newState);
-  }
+    backAction = () => {
+        let newState = this.state;
+        newState.pageStack.pop();
+        this.setState(newState);
+        
+        if(this.state.pageStack.length <= 0) {
+            BackHandler.exitApp()
+        }
+        return true;
+    };
 
-  inputBirth() {
-    
-  }
+    setNextPage(page) {
+        let newState = this.state;
+        newState.pageStack.push(page);
+        this.setState(newState);
+    }
 
-  render() {
-    return (
-      <>
-        <StatusBar backgroundColor="#000"/>
-        <View style={styles.body}>
-          <View style={styles.datePicker}>
-            <DatePicker
-              date={this.state.date}
-              mode='date'
-              locale='ko'
-              maximumDate={new Date}
-              onDateChange={(date) => this.setDate(date)}
-              textColor='#fff'
-            />
-          </View>
-          <TouchableOpacity onPress={this.inputBirth.bind(this)}>
-            <Text style={styles.lightColor}>확인</Text>
-          </TouchableOpacity>
-        </View>
-      </>
-    );
-  }
+    setDate(date, type) {
+        let newState = this.state;
+        if(['birth', 'death'].includes(type)) {
+            date.setHours(0);
+            date.setMinutes(0);
+            date.setSeconds(0);
+            newState[type] = date;
+        }
+        this.setState(newState);
+    }
+
+    componentDidMount() {
+        this.backHandler = BackHandler.addEventListener(
+            "hardwareBackPress",
+            this.backAction
+        );
+    }
+
+    componentWillUnmount() {
+        this.backHandler.remove();
+    }
+
+    render() {
+        let page = <></>;
+        switch(this.state.pageStack[this.state.pageStack.length - 1]) {
+            case 'birth':
+                page = <BirthPick setNextPage={this.setNextPage.bind(this)} setDate={this.setDate.bind(this)}/>;
+                break;
+            case 'death':
+                page = <DeathPick setNextPage={this.setNextPage.bind(this)} setDate={this.setDate.bind(this)}/>;
+                break;
+            case 'timer':
+                page = <LifeTimer setNextPage={this.setNextPage.bind(this)} death={this.state.death}/>;
+                break;
+        }
+        return (
+            <>
+                <StatusBar backgroundColor="#000"/>
+                {page}
+                <KeepAwake/>
+            </>
+        );
+    }
 }
-
-const styles = StyleSheet.create({
-  body: {
-    flex: 1,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignContent: 'center',
-    alignItems: 'center',
-  },
-  datePicker: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lightColor: {
-    color: '#fff',
-  },
-  scrollView: {
-    backgroundColor: Colors.lighter,
-  }
-});
 
 export default App;
